@@ -3,6 +3,7 @@ package avro
 import (
 	"fmt"
 	"io"
+	"log"
 
 	"github.com/getumen/replicator/pkg/store"
 	"github.com/hashicorp/raft"
@@ -16,14 +17,12 @@ const schema = `
 	"type": "record",
 	"fields": [
 		{"name": "key", "type": "bytes"},
-		{"name": "value", "type": ["bytes", "null"]}
+		{"name": "value", "type": "bytes"}
 	]
 }
 `
 
-type snapshotter struct {
-	store store.Store
-}
+type snapshotter struct{}
 
 func (s *snapshotter) CreateSnapshot(store store.Store) (raft.FSMSnapshot, error) {
 
@@ -32,6 +31,7 @@ func (s *snapshotter) CreateSnapshot(store store.Store) (raft.FSMSnapshot, error
 	if err != nil {
 		return nil, err
 	}
+
 	return &fsmSnapshot{
 		snapshot: snapshot,
 	}, nil
@@ -58,12 +58,16 @@ func (s *snapshotter) Restore(store store.Store, reader io.ReadCloser) error {
 			return err
 		}
 		if m, ok := record.(map[string]interface{}); ok {
+			log.Println(m)
 			key := m["key"].([]byte)
-			if value, exists := m["value"]; exists {
-				v := value.([]byte)
-				batch.Put(key, v)
+			if value, ok := m["value"]; ok {
+				if valueMap, ok := value.([]byte); ok {
+					batch.Put(key, valueMap)
+				} else {
+					return fmt.Errorf("unsupported type: %v", value)
+				}
 			} else {
-				batch.Put(key, nil)
+				return fmt.Errorf("value not found")
 			}
 		} else {
 			return fmt.Errorf("fail to cast record")
@@ -79,9 +83,11 @@ func (s *snapshotter) Restore(store store.Store, reader io.ReadCloser) error {
 	}
 
 	// write the remaining block
-	err = store.Write(batch)
-	if err != nil {
-		return err
+	if batch.Len() > 0 {
+		err = store.Write(batch)
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil
@@ -125,12 +131,12 @@ func (f *fsmSnapshot) Persist(sink raft.SnapshotSink) error {
 
 				block = append(block, map[string]interface{}{
 					"key":   key,
-					"value": goavro.Union("bytes", value),
+					"value": value,
 				})
 			} else {
 				block = append(block, map[string]interface{}{
 					"key":   key,
-					"value": goavro.Union("null", nil),
+					"value": []byte{},
 				})
 			}
 

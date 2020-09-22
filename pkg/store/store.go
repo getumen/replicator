@@ -1,11 +1,16 @@
 package store
 
+import "fmt"
+
+// ErrNotFound represents not found
+var ErrNotFound = fmt.Errorf("not found")
+
 // Store is persistent storage for finite state machine
 type Store interface {
 	Snapshot() (Snapshot, error)
 	DiscardAll() error
 	CreateBatch() Batch
-	Write(Batch) error
+	Write(ba Batch) error
 }
 
 // Batch is an operation batch
@@ -21,6 +26,8 @@ type Batch interface {
 type Snapshot interface {
 	NewIterator() Iterator
 	Release()
+	Get([]byte) ([]byte, error)
+	Has([]byte) (bool, error)
 }
 
 // Iterator is an iterator of Store
@@ -66,4 +73,6 @@ type Iterator interface {
 	// Prev moves the iterator to the previous key/value pair.
 	// It returns false if the iterator is exhausted.
 	Prev() bool
+
+	Release()
 }

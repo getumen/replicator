@@ -1,5 +1,7 @@
 package snapshotter
 
+//go:generate mockgen -source=$GOFILE -destination=mock$GOPACKAGE/mock_$GOFILE -package=mock$GOPACKAGE
+
 import (
 	"io"
 

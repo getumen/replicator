@@ -1,5 +1,7 @@
 package handler
 
+//go:generate mockgen -source=$GOFILE -destination=mock$GOPACKAGE/mock_$GOFILE -package=mock$GOPACKAGE
+
 import (
 	"github.com/getumen/replicator/pkg/models"
 	"github.com/getumen/replicator/pkg/store"

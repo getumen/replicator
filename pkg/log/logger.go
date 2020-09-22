@@ -1,5 +1,7 @@
 package log
 
+//go:generate mockgen -source=$GOFILE -destination=mock$GOPACKAGE/mock_$GOFILE -package=mock$GOPACKAGE
+
 // Logger is a logger interface
 type Logger interface {
 	Debug(message string, fields Fields)
