@@ -45,7 +45,7 @@ func TestSnapshotter_CreateSnapshot(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if bytes.Compare(v, value) != 0 {
+		if !bytes.Equal(v, value) {
 			t.Fatalf("the value is invalid: %v", v)
 		}
 	}
@@ -60,20 +60,25 @@ func TestSnapshotter_Restore(t *testing.T) {
 	target := &snapshotterImpl{}
 
 	go func() {
-		defer w.Close()
-		codec, err := goavro.NewCodec(schema)
-		if err != nil {
-			log.Fatal(err)
+		defer func() {
+			err = w.Close()
+			if err != nil {
+				log.Fatal(err)
+			}
+		}()
+		codec, errCodec := goavro.NewCodec(schema)
+		if errCodec != nil {
+			log.Fatal(errCodec)
 		}
-		writer, err := goavro.NewOCFWriter(
+		writer, errOCFWriter := goavro.NewOCFWriter(
 			goavro.OCFConfig{
 				W:               w,
 				Codec:           codec,
 				CompressionName: "snappy",
 			},
 		)
-		if err != nil {
-			log.Fatal(err)
+		if errOCFWriter != nil {
+			log.Fatal(errOCFWriter)
 		}
 		block := []interface{}{
 			map[string]interface{}{
@@ -105,7 +110,7 @@ func TestSnapshotter_Restore(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if bytes.Compare(v, []byte("value")) != 0 {
+	if !bytes.Equal(v, []byte("value")) {
 		t.Fatalf("expected value, but got %v", v)
 	}
 	exists, err := snap.Has([]byte("key1"))
@@ -158,7 +163,10 @@ func TestFsmSnapshot_Persist(t *testing.T) {
 
 	snapshotSink.EXPECT().Close()
 
-	target.Persist(snapshotSink)
+	err = target.Persist(snapshotSink)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	r, err := goavro.NewOCFReader(buf)
 	if err != nil {

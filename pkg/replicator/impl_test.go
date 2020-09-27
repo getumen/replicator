@@ -77,7 +77,7 @@ func TestReplicator_InMemSignleNode(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if bytes.Compare(value, []byte("bar")) != 0 {
+	if !bytes.Equal(value, []byte("bar")) {
 		t.Fatalf("key has wrong value: %v", value)
 	}
 
