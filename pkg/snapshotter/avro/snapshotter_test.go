@@ -8,8 +8,8 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/getumen/replicator/pkg/snapshotsink/mocksnapshotsink"
 	"github.com/getumen/replicator/pkg/store/mockstore"
-	"github.com/getumen/replicator/snapshotsink/mocksnapshotsink"
 	"github.com/golang/mock/gomock"
 	"github.com/linkedin/goavro/v2"
 )
@@ -31,7 +31,7 @@ func TestSnapshotter_CreateSnapshot(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	target := &snapshotter{}
+	target := &snapshotterImpl{}
 
 	snapshot, err := target.CreateSnapshot(store)
 
@@ -57,7 +57,7 @@ func TestSnapshotter_Restore(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	target := &snapshotter{}
+	target := &snapshotterImpl{}
 
 	go func() {
 		defer w.Close()
