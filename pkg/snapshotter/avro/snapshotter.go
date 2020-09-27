@@ -3,8 +3,8 @@ package avro
 import (
 	"fmt"
 	"io"
-	"log"
 
+	"github.com/getumen/replicator/pkg/snapshotter"
 	"github.com/getumen/replicator/pkg/store"
 	"github.com/hashicorp/raft"
 	"github.com/linkedin/goavro/v2"
@@ -22,9 +22,14 @@ const schema = `
 }
 `
 
-type snapshotter struct{}
+type snapshotterImpl struct{}
 
-func (s *snapshotter) CreateSnapshot(store store.Store) (raft.FSMSnapshot, error) {
+// NewAvroSnapshotter returns avro snapshotter
+func NewAvroSnapshotter() snapshotter.Snapshotter {
+	return &snapshotterImpl{}
+}
+
+func (s *snapshotterImpl) CreateSnapshot(store store.Store) (raft.FSMSnapshot, error) {
 
 	snapshot, err := store.Snapshot()
 
@@ -37,7 +42,7 @@ func (s *snapshotter) CreateSnapshot(store store.Store) (raft.FSMSnapshot, error
 	}, nil
 }
 
-func (s *snapshotter) Restore(store store.Store, reader io.ReadCloser) error {
+func (s *snapshotterImpl) Restore(store store.Store, reader io.ReadCloser) error {
 	defer reader.Close()
 
 	err := store.DiscardAll()
@@ -58,7 +63,6 @@ func (s *snapshotter) Restore(store store.Store, reader io.ReadCloser) error {
 			return err
 		}
 		if m, ok := record.(map[string]interface{}); ok {
-			log.Println(m)
 			key := m["key"].([]byte)
 			if value, ok := m["value"]; ok {
 				if valueMap, ok := value.([]byte); ok {
