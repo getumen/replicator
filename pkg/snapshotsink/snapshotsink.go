@@ -6,4 +6,6 @@ import "github.com/hashicorp/raft"
 
 // SnapshotSink is wrapper of raft.SnapshotSink
 // this interface is for generating mock
-type SnapshotSink raft.SnapshotSink
+type SnapshotSink interface {
+	raft.SnapshotSink
+}
