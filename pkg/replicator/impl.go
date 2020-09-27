@@ -3,7 +3,6 @@ package replicator
 import (
 	"fmt"
 	"io"
-	"log"
 	"time"
 
 	"github.com/getumen/replicator/pkg/handler"
@@ -233,7 +232,6 @@ func (r *replicator) Restore(reader io.ReadCloser) error {
 // values will be made available in the ApplyFuture returned by Raft.Apply
 // method if that method was called on the same Raft node as the FSM.
 func (r *replicator) ApplyBatch(logs []*raft.Log) []interface{} {
-	log.Printf("raft logs: %v", logs)
 	commands := make([]*models.Command, 0)
 
 	for i := range logs {
@@ -298,6 +296,6 @@ func (r *replicator) Leader() string {
 	return string(r.raft.Leader())
 }
 
-func (r *replicator) LeaderCh() chan bool {
-	return r.LeaderCh()
+func (r *replicator) LeaderCh() <-chan bool {
+	return r.raft.LeaderCh()
 }

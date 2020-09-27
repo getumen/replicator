@@ -31,12 +31,17 @@ func (s *snapshotterImpl) CreateSnapshot(store store.Store) (raft.FSMSnapshot, e
 	}, nil
 }
 
-func (s *snapshotterImpl) Restore(store store.Store, reader io.ReadCloser) error {
-	defer reader.Close()
+func (s *snapshotterImpl) Restore(store store.Store, reader io.ReadCloser) (err error) {
+	defer func() {
+		closeErr := reader.Close()
+		if err == nil && closeErr != nil {
+			err = closeErr
+		}
+	}()
 
-	err := store.DiscardAll()
+	err = store.DiscardAll()
 	if err != nil {
-		return err
+		return
 	}
 
 	batch := store.CreateBatch()
@@ -44,17 +49,19 @@ func (s *snapshotterImpl) Restore(store store.Store, reader io.ReadCloser) error
 	var m map[string]string
 	err = json.NewDecoder(reader).Decode(&m)
 	if err != nil {
-		return err
+		return
 	}
 
 	for key, value := range m {
-		k, err := base64.StdEncoding.DecodeString(key)
-		if err != nil {
-			return err
+		k, errDecode := base64.StdEncoding.DecodeString(key)
+		if errDecode != nil {
+			err = errDecode
+			return
 		}
-		v, err := base64.StdEncoding.DecodeString(value)
-		if err != nil {
-			return err
+		v, errDecodeString := base64.StdEncoding.DecodeString(value)
+		if errDecodeString != nil {
+			err = errDecodeString
+			return
 		}
 		batch.Put(k, v)
 	}
@@ -97,7 +104,10 @@ func (f *fsmSnapshot) Persist(sink raft.SnapshotSink) error {
 	}()
 
 	if err != nil {
-		sink.Cancel()
+		err = sink.Cancel()
+		if err != nil {
+			return err
+		}
 	}
 
 	return err

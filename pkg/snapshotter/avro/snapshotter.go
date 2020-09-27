@@ -42,25 +42,30 @@ func (s *snapshotterImpl) CreateSnapshot(store store.Store) (raft.FSMSnapshot, e
 	}, nil
 }
 
-func (s *snapshotterImpl) Restore(store store.Store, reader io.ReadCloser) error {
-	defer reader.Close()
-
-	err := store.DiscardAll()
+func (s *snapshotterImpl) Restore(store store.Store, reader io.ReadCloser) (err error) {
+	defer func() {
+		closeErr := reader.Close()
+		if err == nil && closeErr != nil {
+			err = closeErr
+		}
+	}()
+	err = store.DiscardAll()
 	if err != nil {
-		return err
+		return
 	}
 
 	r, err := goavro.NewOCFReader(reader)
 	if err != nil {
-		return err
+		return
 	}
 
 	batch := store.CreateBatch()
 
 	for r.Scan() {
-		record, err := r.Read()
-		if err != nil {
-			return err
+		record, readErr := r.Read()
+		if readErr != nil {
+			err = readErr
+			return
 		}
 		if m, ok := record.(map[string]interface{}); ok {
 			key := m["key"].([]byte)
@@ -68,13 +73,16 @@ func (s *snapshotterImpl) Restore(store store.Store, reader io.ReadCloser) error
 				if valueMap, ok := value.([]byte); ok {
 					batch.Put(key, valueMap)
 				} else {
-					return fmt.Errorf("unsupported type: %v", value)
+					err = fmt.Errorf("unsupported type: %v", value)
+					return
 				}
 			} else {
-				return fmt.Errorf("value not found")
+				err = fmt.Errorf("value not found")
+				return
 			}
 		} else {
-			return fmt.Errorf("fail to cast record")
+			err = fmt.Errorf("fail to cast record")
+			return
 		}
 
 		if batch.Len() == blockSize {
@@ -163,7 +171,10 @@ func (f *fsmSnapshot) Persist(sink raft.SnapshotSink) error {
 	}()
 
 	if err != nil {
-		sink.Cancel()
+		err = sink.Cancel()
+		if err != nil {
+			return err
+		}
 	}
 
 	return err

@@ -12,6 +12,6 @@ type Replicator interface {
 	GetSnapshot() (store.Snapshot, error)
 	IsLeader() bool
 	Leader() string
-	LeaderCh() chan bool
+	LeaderCh() <-chan bool
 	Start(string, bool) error
 }

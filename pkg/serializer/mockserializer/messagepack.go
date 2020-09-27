@@ -1,8 +1,6 @@
 package mockserializer
 
 import (
-	"log"
-
 	models "github.com/getumen/replicator/pkg/models"
 	"github.com/getumen/replicator/pkg/serializer"
 	"github.com/vmihailenco/msgpack/v5"
@@ -25,6 +23,5 @@ func (gobSerializer) Deserialize(data []byte) (*models.Command, error) {
 	if err != nil {
 		return nil, err
 	}
-	log.Printf("deserialize: %v from %s with %+v", command, data, err)
 	return &command, nil
 }
