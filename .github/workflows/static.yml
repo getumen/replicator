@@ -12,6 +12,7 @@ jobs:
       with:
         run: imports
         token: ${{ secrets.GITHUB_TOKEN }}
+        directory: $(find . -type f -name '*.go'| grep -v 'mock')
 
   errcheck:
     name: Errcheck
